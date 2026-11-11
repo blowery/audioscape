@@ -1,0 +1,5 @@
+{
+  "name": "audioscape",
+  "owner": { "name": "Ben Lowery" },
+  "plugins": [{ "name": "audioscape", "source": "./" }]
+}

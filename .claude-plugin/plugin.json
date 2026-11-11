@@ -1,0 +1,7 @@
+{
+  "name": "audioscape",
+  "version": "0.1.0",
+  "description": "An ambient soundscape that follows what the Claude Code session is doing",
+  "author": { "name": "Ben Lowery" },
+  "license": "MIT"
+}
