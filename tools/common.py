@@ -82,6 +82,21 @@ def lowpass(xs, coef):
     return xs
 
 
+def bandpass(xs, low, high, damp=0.5):
+    """Band-pass in place. The centre moves from `low` to `high` Hz across the
+    clip; pass the same value twice to hold it still. Smaller damp rings more."""
+    n = len(xs)
+    lo = band = 0.0
+    f = 2 * math.sin(math.pi * low / RATE)
+    for i, x in enumerate(xs):
+        if low != high and i % 64 == 0:
+            f = 2 * math.sin(math.pi * (low + (high - low) * i / n) / RATE)
+        lo += f * band
+        band += f * (x - lo - damp * band)
+        xs[i] = band
+    return xs
+
+
 def noise(seconds):
     return [random.random() * 2 - 1 for _ in range(int(seconds * RATE))]
 

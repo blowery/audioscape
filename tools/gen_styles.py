@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
-"""Renders the clips of the tape, drone, space, decay, bells and hum styles
+"""Renders the clips of the tape, drone, space, decay, bells, hum and cafe styles
 into ../sounds/<style>/*.m4a.
 
-    python3 tools/gen_styles.py            # all six
+    python3 tools/gen_styles.py            # all seven
     python3 tools/gen_styles.py bells hum  # only these
 """
 import math
 import random
 import sys
 
-from common import RATE, TAU, clean, echo, glide, hz, lowpass, mix, noise, silence, strike, swell, swell2, tone, write
+from common import (RATE, TAU, bandpass, clean, echo, glide, hz, lowpass, mix, noise, pan_gains, silence, strike,
+                    swell, swell2, tone, write)
 
 
 # --- tape: soft piano-like notes and sung notes, as if on old tape loops ---
@@ -257,8 +258,143 @@ def hum():
         echo(l, r, 0.19, 0.35, 0.7)
         write(out, "bubbles-%d" % i, l, r, 0.3)
 
+# --- cafe: working at a table in a coffee shop ---
 
-STYLES = {"tape": tape, "drone": drone, "space": space, "decay": decay, "bells": bells, "hum": hum}
+def cafe():
+    out = clean("cafe")
+    ceramic = [(1, 1.0, 0.12), (2.3, 0.5, 0.08), (3.6, 0.3, 0.05)]
+    small_bell = [(1, 1.0, 1.2), (2.76, 0.4, 0.6), (5.4, 0.15, 0.3)]
+    keys = [(1, 1.0, 0.02), (2.7, 0.4, 0.01)]
+
+    def place(clip, mono, pan, level=1.0):
+        gl, gr = pan_gains(pan)
+        for i, s in enumerate(mono):
+            clip[0][i] += s * gl * level
+            clip[1][i] += s * gr * level
+
+    def murmur(seconds, voices):
+        """People talking, too far away to follow. Each voice is noise shaped
+        to a vowel-like band, switched on and off at the pace of syllables."""
+        clip = silence(seconds)
+        for _ in range(voices):
+            xs = noise(seconds)
+            level = target = 0.0
+            hold = 0
+            for i in range(len(xs)):
+                if hold == 0:
+                    hold = int(random.uniform(0.1, 0.3) * RATE)
+                    target = 0.0 if random.random() < 0.3 else random.uniform(0.3, 1.0)
+                hold -= 1
+                level += 0.002 * (target - level)
+                xs[i] *= level
+            centre = random.uniform(350, 1600)
+            bandpass(xs, centre, centre * random.uniform(0.8, 1.25), 0.45)
+            place(clip, lowpass(xs, 0.4), random.uniform(-0.9, 0.9), random.uniform(0.4, 1.0))
+        for channel in clip:  # the room itself
+            room = lowpass(noise(seconds), 0.03)
+            for i in range(len(channel)):
+                channel[i] += 2.0 * room[i]
+        return swell2(clip, 6, 7)
+
+    write(out, "murmur-quiet", *murmur(20, 5), 0.4)
+    write(out, "murmur-busy", *murmur(20, 12), 0.5)
+
+    for i in (1, 2):  # the steam wand, across the room
+        clip = []
+        for _ in range(2):
+            xs = bandpass(noise(6), 1400, 3200, 0.3)
+            hiss = noise(6)
+            dull = lowpass(list(hiss), 0.4)
+            clip.append(swell([x + 0.3 * (h - d) for x, h, d in zip(xs, hiss, dull)], 0.8, 1.5))
+        write(out, "steam-%d" % i, clip[0], clip[1], 0.35)
+
+    clip = []  # the grinder
+    for _ in range(2):
+        xs = bandpass(noise(4), 500, 700, 0.35)
+        for i in range(len(xs)):
+            xs[i] *= 0.55 + 0.45 * ((i * 93.0 / RATE) % 1.0)
+        clip.append(swell(lowpass(xs, 0.5), 0.25, 0.6))
+    write(out, "grinder", clip[0], clip[1], 0.35)
+
+    def cup(clip, at, level=1.0, pan=None):
+        freq = random.uniform(1700, 2700)
+        strike(clip[0], clip[1], at, freq, ceramic, level=level, pan=random.uniform(-0.7, 0.7) if pan is None else pan, attack=0.001)
+
+    for i in (1, 2, 3):  # a cup set down on a saucer
+        clip = silence(2)
+        cup(clip, 0.1)
+        if i != 2:
+            cup(clip, 0.1 + random.uniform(0.07, 0.2), 0.5)
+        write(out, "clink-%d" % i, clip[0], clip[1], 0.25)
+
+    for i in (1, 2):  # someone stirring while they wait
+        clip = silence(5)
+        t, pan, freq = 0.2, random.uniform(-0.5, 0.5), random.uniform(2500, 3100)
+        for _ in range(random.randint(7, 10)):
+            strike(clip[0], clip[1], t, freq * random.uniform(0.97, 1.03), ceramic, level=random.uniform(0.5, 1.0), pan=pan, attack=0.001)
+            t += random.uniform(0.28, 0.4)
+        write(out, "stir-%d" % i, clip[0], clip[1], 0.22)
+
+    for i in (1, 2):  # dishes going into a tub behind the counter
+        clip = silence(3)
+        t = 0.1
+        for k in range(random.randint(6, 9)):
+            strike(clip[0], clip[1], t, random.uniform(900, 2500), ceramic, level=1.0 / (1 + 0.3 * k), pan=random.uniform(-0.3, 0.6), attack=0.001)
+            t += random.uniform(0.04, 0.16)
+        for channel in clip:
+            rattle = swell(bandpass(noise(3), 2500, 1500, 0.6), 0.05, 2.2)
+            for k in range(len(channel)):
+                channel[k] += 0.25 * rattle[k]
+        write(out, "clatter-%d" % i, clip[0], clip[1], 0.45)
+
+    clip = silence(2)  # a chair pushed back
+    glide(clip[0], clip[1], 0.1, 250, 205, 0.7, pan=-0.4, partials=[(1, 1.0), (2, 0.6), (3, 0.5), (4.1, 0.3)])
+    for channel in clip:
+        rough = lowpass(noise(2), 0.05)
+        for k in range(len(channel)):
+            channel[k] *= 0.4 + 12 * abs(rough[k])
+    write(out, "scrape", clip[0], clip[1], 0.35)
+
+    for i in (1, 2, 3):  # typing on a laptop
+        clip = silence(3.5)
+        t, pan = 0.1, random.uniform(-0.2, 0.2)
+        gl, gr = pan_gains(pan)
+        for _ in range(random.randint(8, 16)):
+            level = random.uniform(0.5, 1.0)
+            strike(clip[0], clip[1], t, random.uniform(160, 220), keys, level=level, pan=pan, attack=0.001)
+            first = int(t * RATE)
+            for k in range(int(0.008 * RATE)):
+                click = level * 0.5 * (random.random() * 2 - 1) * (1 - k / (0.008 * RATE))
+                clip[0][first + k] += click * gl
+                clip[1][first + k] += click * gr
+            t += random.uniform(0.07, 0.22)
+        write(out, "typing-%d" % i, lowpass(clip[0], 0.6), lowpass(clip[1], 0.6), 0.25)
+
+    for i in (1, 2):  # a page turned
+        clip = []
+        for _ in range(2):
+            xs = [0.0] * int(0.3 * RATE) + swell(bandpass(noise(0.7), 1800, 4200, 0.7), 0.25, 0.4)
+            clip.append(xs + [0.0] * (2 * RATE - len(xs)))
+        write(out, "page-%d" % i, clip[0], clip[1], 0.2)
+
+    for i in (1, 2):  # music from a small speaker, too quiet to name
+        clip = silence(12)
+        chord = [60, 64, 67, 71, 74] if i == 1 else [57, 60, 64, 67, 72]
+        t = 0.3
+        while t < 8.5:
+            strike(clip[0], clip[1], t, hz(random.choice(chord)), [(1, 1.0, 1.6), (2, 0.4, 1.0), (3, 0.15, 0.6)], level=random.uniform(0.5, 1.0), pan=0.5, attack=0.01)
+            t += random.choice([0.4, 0.4, 0.8, 1.2])
+        lowpass(clip[0], 0.12)
+        lowpass(clip[1], 0.12)
+        write(out, "radio-%d" % i, *swell2(clip, 2, 3), 0.3)
+
+    clip = silence(4)  # the bell on the door as someone leaves
+    for k, freq in enumerate([1568.0, 2093.0, 1568.0]):
+        strike(clip[0], clip[1], 0.1 + 0.22 * k, freq, small_bell, level=1.0 / (1 + k), pan=0.6, attack=0.002)
+    write(out, "doorbell", *swell2(clip, 0.001, 1.5), 0.25)
+
+
+STYLES = {"tape": tape, "drone": drone, "space": space, "decay": decay, "bells": bells, "hum": hum, "cafe": cafe}
 
 if __name__ == "__main__":
     random.seed(23)

@@ -48,6 +48,9 @@ const DRONE_SOUR = named('dark', 58, 63, 65)
 const SPACE_SOUR = named('off', 49, 54, 61)
 const BELL_SOUR = named('clash', 1, 2, 3)
 const GROANS = named('groan', 1, 2)
+const TYPING = named('typing', 1, 2, 3)
+const PAGES = named('page', 1, 2)
+const CLATTER = named('clatter', 1, 2)
 
 export const STYLES: Record<string, Style> = {
   nature: {
@@ -214,6 +217,26 @@ export const STYLES: Record<string, Style> = {
     air: {},
     airOther: named('bubbles', 1, 2, 3),
     airGain: 0.25,
+    airEvery: 2500,
+  },
+  cafe: {
+    about: 'a coffee shop: murmur, steam and cups, typing while tools run',
+    drone: {
+      idle: layer(['murmur-quiet'], 5, 7, 0.3),
+      working: layer(['murmur-busy', 'murmur-busy', 'murmur-quiet'], 5, 7, 0.34),
+      waiting: layer(['murmur-quiet'], 6, 8, 0.2),
+    },
+    pad: {
+      idle: layer([...named('clink', 1, 2), ...named('radio', 1, 2)], 6, 10, 0.3),
+      working: layer([...named('steam', 1, 2), 'grinder', ...named('clink', 1, 2, 3), ...named('radio', 1, 2)], 3.5, 6, 0.36),
+      waiting: layer(named('stir', 1, 2), 5, 7, 0.32),
+    },
+    sour: [...CLATTER, 'scrape'],
+    onError: CLATTER,
+    resolve: ['doorbell'],
+    air: { Read: PAGES, Grep: PAGES, Glob: PAGES, Edit: TYPING, Write: TYPING, Bash: TYPING },
+    airOther: [...TYPING, 'clink-3'],
+    airGain: 0.28,
     airEvery: 2500,
   },
 }

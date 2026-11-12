@@ -65,6 +65,7 @@ A `~` after the mood means errors have soured it.
 | `decay` | A warm phrase, repeated rarely | The phrase loops | Half the phrase | Tape crackle, then worn copies of the phrase |
 | `bells` | Low bells over a gong | Mid bells, more often | Two high bells | Bells that clash |
 | `hum` | Engine hum and distant creaks | A higher hum and turning machinery | Sonar pings | Hull groans |
+| `cafe` | Quiet murmur, cups, faint music | Busier murmur, steam, the grinder | Someone stirring a cup | Dishes clattering, a chair scraping |
 
 ## Commands
 
@@ -87,7 +88,7 @@ library. `afconvert`, which ships with macOS, compresses them.
 ```
 python3 tools/gen_nature.py
 python3 tools/gen_tonal.py
-python3 tools/gen_styles.py            # tape, drone, space, decay, bells, hum
+python3 tools/gen_styles.py            # tape, drone, space, decay, bells, hum, cafe
 python3 tools/gen_styles.py bells hum  # only these
 ```
 
