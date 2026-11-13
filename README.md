@@ -53,6 +53,24 @@ Two more things react:
 The status line shows the style and the mood, for example `♪ nature: working`.
 A `~` after the mood means errors have soured it.
 
+## Several sessions, one soundscape
+
+Every Claude Code session on the machine that has the mod reports its state
+to `~/.claude/audioscape/`. One session, the oldest one still running, plays
+the sound for all of them. If it exits, the next oldest takes over within a
+few seconds.
+
+- The more sessions are working, the denser the working sound gets.
+- If one session waits on you while others work, the waiting sound plays over
+  the working sound.
+- The most error-prone session sets how sour it sounds.
+- Tool sounds from all sessions share one rate limit.
+- The style, the volume and on/off apply to every session at once.
+
+With more than one session the status line shows the count, for example
+`♪ nature: 2 working, 1 waiting`. Sessions without a person at the prompt,
+such as `claude -p` runs, neither play nor count.
+
 ## Styles
 
 | Style | Idle | Working | Waiting | Errors |
@@ -78,7 +96,8 @@ A `~` after the mood means errors have soured it.
 /audioscape 40         set the volume, from 0 to 100
 ```
 
-The style, the volume and the on/off setting persist across sessions.
+The style, the volume and the on/off setting apply to every session on the
+machine, and they persist.
 
 ## Changing the sounds
 
@@ -96,14 +115,15 @@ python3 tools/gen_styles.py bells hum  # only these
 layer plays in each mood, how long to wait between clips, and how loud they
 are. To add a style, render its clips into `sounds/<name>/` and add a table.
 
-`hooks/register.ts` listens to the session and moves between moods.
+`hooks/register.ts` listens to the session, reports its state, and plays the
+sound when this session is the player.
 
 ## Limits
 
 - Each clip plays at a fixed volume, so a clip cannot fade or change once it
   has started. All movement comes from which clips start, and when.
-- Every session with the mod makes its own sound. Two sessions play two
-  soundscapes at once.
+- You can hear that some session waits on you, but not which one.
+- Sessions on other machines, or in the cloud, are not included.
 - The nature style is synthesized from filtered noise and sine chirps. It is
   a stylized outdoors, not a field recording.
 
